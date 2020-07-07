@@ -1,14 +1,24 @@
-- 设计模式
+###   :straight_ruler:算法
 
-  - [第一章节](desgin-pattern/Java面试必备：手写单例模式.md)
-  - [工厂模式](desgin-pattern/工厂模式超详解（代码示例）.md)
-  - [原型模式](desgin-pattern/设计模式之原型模式.md)
-  - [代理模式](desgin-pattern/设计模式之代理模式.md)
+- [字节高频算法](Algorithms/字节.md)
+- [排序算法](Algorithms/排序.md)
+- [哈希表](哈希表.md)
 
-- Spring框架
+###   :computer:操作系统
 
-  - [初识spring框架](spring/【10分钟学Spring】：（一）初识Spring框架.md)
-  - [依赖注入及示例](spring/【10分钟学Spring】：（二）一文搞懂spring依赖注入（DI）.md)
-  - [spring的条件化装配](spring/【10分钟学Spring】：（三）你了解spring的高级装配吗_条件化装配bean.md)
+###   :globe_with_meridians:计算机网络
 
-- 数据库
+[计网](计算机网络.md)
+
+[http和https](HTTP和HTTPS.md)
+
+###   :floppy_disk:数据库
+###   :coffee:Java
+
+[JVM](JVM.md)
+
+[Lock与synchronized](Lock与synchronized.md)
+
+[线程池](线程池.md)
+
+###   :rocket:框架
