@@ -58,7 +58,7 @@
 - [集群](https://github.com/CyC2018/CS-Notes/blob/master/docs/notes/集群.md)
 - [攻击技术](https://github.com/CyC2018/CS-Notes/blob/master/docs/notes/攻击技术.md)
 - [缓存](https://github.com/CyC2018/CS-Notes/blob/master/docs/notes/缓存.md)
-- [消息队列](https://github.com/CyC2018/CS-Notes/blob/master/docs/notes/消息队列.md)
+- [消息队列](https://github.com/stubbornwdb/MyNotes/blob/master/docs/notes/消息队列.md)
 
 ## :wrench: 工具 
 
