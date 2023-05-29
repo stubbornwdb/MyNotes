@@ -36,6 +36,7 @@
 [Leetcode-Database 题解](notes/Leetcode-Database%20题解.md) </br>
 [MySQL](notes/MySQL.md) </br>
 [Redis](notes/Redis.md)
+[Redis面经](mynotes/redis/RedisQuestion.md)
 
 ## ☕️ Java
 
@@ -85,7 +86,5 @@
 > [Object 、String源码](mynotes/sourcecode.md)
 
 ## 其他
-
-> [Redis笔记](mynotes/Others/Redis学习.md)  
 >[WERPC](mynotes/werpc.md)  
 > [introduce](mynotes/Others/自我介绍.md)  
