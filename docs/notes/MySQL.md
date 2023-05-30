@@ -143,12 +143,6 @@ SELECT ... LOCK IN SHARE MODE;
 
 在查询语句后面增加 LOCK IN SHARE MODE ，Mysql会对查询结果中的每行都加共享锁，当没有其他线程对查询结果集中的任何一行使用排他锁时，可以成功申请共享锁，否则会被阻塞。其他线程也可以读取使用了共享锁的表（行？），而且这些线程读取的是同一个版本的数据。
 
-![image-20201113164912354](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113164912354.png)
-
-![image-20201113164941660](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113164941660.png)
-
-![image-20201113165003031](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113165003031.png)
-
 ### 4.3 写锁（排他锁）- 表锁
 
 排他锁（eXclusive Lock）又称写锁，如果事务T对数据A加上排他锁后，则其他事务不能再对A加任任何类型的封锁。获准排他锁的事务既能读数据，又能修改数据。
@@ -161,21 +155,10 @@ SELECT ... FOR UPDATE;
 
 在查询语句后面增加 FOR UPDATE ，Mysql会对查询结果中的每行都加排他锁，当没有其他线程对查询结果集中的任何一行使用排他锁时，可以成功申请排他锁，否则会被阻塞。
 
-![image-20201113165148273](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113165148273.png)
-
-![image-20201113165205988](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113165205988.png)
-
-
 
 ### 4.4 读写锁总结
 
-![image-20201113165315004](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113165315004.png)
-
-![image-20201113165328546](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113165328546.png)
-
 ### 4.5 行锁（偏写）
-
-![image-20201113163723431](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113163723431.png)
 
 偏向INNODB存储引擎，开销大，加锁慢；会出现死锁；锁粒度最小，发生冲突的概率最低，并发度也最高
 
@@ -198,14 +181,6 @@ INNODB与MyISAM最大的不同点：INNODB**支持事务Transaction**和**采用
 - **如果存在记录则插入，否则更新**？INSERT INTO `student`(`name`, `age`) VALUES('Jack', 19)  ON DUPLICATE KEY   UPDATE `age`=19;
 
 - 分析与总结
-
-![image-20201113170321738](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113170321738.png)
-
-![image-20201113170331210](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113170331210.png)
-
-![image-20201113170242847](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113170242847.png)
-
-
 
 - 优化建议：
 
@@ -246,9 +221,6 @@ MVCC 不能解决幻读的问题，Next-Key Locks 就是为了解决这个问题
 SELECT c FROM t WHERE c BETWEEN 10 and 20 FOR UPDATE;Copy to clipboardErrorCopied
 ```
 
-![image-20201113163949865](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113163949865.png)
-
-
 
 **Next-Key Lock**
 
@@ -275,8 +247,6 @@ SELECT c FROM t WHERE c BETWEEN 10 and 20 FOR UPDATE;Copy to clipboardErrorCopie
 - MyISAM采用表级锁(table-level locking)。
 - InnoDB支持行级锁(row-level locking)和表级锁,默认为行级锁
 
-![image-20201113164138713](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113164138713.png)
-
 ## 5.MySql逻辑架构
 
 ### 5.1  逻辑架构
@@ -294,61 +264,15 @@ MySQL的逻辑架构可分为四层，包括连接层、服务层、引擎层和
 ![为了让你彻底弄懂 MySQL 事务日志，我通宵肝出了这份图解！](https://www.cxyxiaowu.com/wp-content/uploads/2020/06/1591519979-8751747aea85ccb.png)
 
 ### 5.2 一条 sql 语句是如何执行
+执行一条 SQL 查询语句，期间发生了什么？
 
-其实我们的 sql 可以分为两种，一种是查询，一种是更新（增加，更新，删除）。
-
-**查询语句**
-
-```
-select * from tb_student  A where A.age='18' and A.name=' 张三 ';
-```
-
-结合上面的说明，我们分析下这个语句的执行流程：
-
-- 先检查该语句是否有权限，如果没有权限，直接返回错误信息，如果有权限，在 MySQL8.0 版本以前，会先查询缓存，以这条 sql 语句为 key 在内存中查询是否有结果，如果有直接缓存，如果没有，执行下一步。
-- 通过分析器进行词法分析，提取 sql 语句的关键元素，比如提取上面这个语句是查询 select，提取需要查询的表名为 tb_student,需要查询所有的列，查询条件是这个表的 id='1'。然后判断这个 sql 语句是否有语法错误，比如关键词是否正确等等，如果检查没问题就执行下一步。
-- 接下来就是优化器进行确定执行方案，上面的 sql 语句，可以有两种执行方案：
-
-```
-  a.先查询学生表中姓名为“张三”的学生，然后判断是否年龄是 18。  
-  b.先找出学生中年龄 18 岁的学生，然后再查询姓名为“张三”的学生。
-```
-
-​    那么优化器根据自己的优化算法进行选择执行效率最好的一个方案（优化器认为，有时候不一定最好）。那么确认了执行计划后就准备开始执行了。
-
-- 进行权限校验，如果没有权限就会返回错误信息，如果有权限就会调用数据库引擎接口，返回引擎的执行结果。
-
- **更新语句**
-
-```
-update tb_student A set A.age='19' where A.name=' 张三 ';
-```
-
-我们来给张三修改下年龄，在实际数据库肯定不会设置年龄这个字段的，不然要被技术负责人打的。其实条语句也基本上会沿着上一个查询的流程走，只不过执行更新的时候肯定要记录日志啦，这就会引入日志模块了，MySQL 自带的日志模块式 **binlog（归档日志）** ，所有的存储引擎都可以使用，我们常用的 InnoDB 引擎还自带了一个日志模块 **redo log（重做日志）**，我们就以 InnoDB 模式下来探讨这个语句的执行流程。流程如下：
-
-•先查询到张三这一条数据，如果有缓存，也是会用到缓存。•然后拿到查询的语句，把 age 改为 19，然后调用引擎 API 接口，写入这一行数据，InnoDB 引擎把数据保存在内存中，同时记录 redo log，此时 redo log 进入 prepare 状态，然后告诉执行器，执行完成了，随时可以提交。•执行器收到通知后记录 binlog，然后调用引擎接口，提交 redo log 为提交状态。•更新完成。
-
-**这里肯定有同学会问，为什么要用两个日志模块，用一个日志模块不行吗?**
-
-这是因为最开始 MySQL 并没与 InnoDB 引擎( InnoDB 引擎是其他公司以插件形式插入 MySQL 的) ，MySQL 自带的引擎是 MyISAM，但是我们知道 redo log 是 InnoDB 引擎特有的，其他存储引擎都没有，这就导致会没有 crash-safe 的能力(crash-safe 的能力即使数据库发生异常重启，之前提交的记录都不会丢失)，binlog 日志只能用来归档。
-
-并不是说只用一个日志模块不可以，只是 InnoDB 引擎就是通过 redo log 来支持事务的。那么，又会有同学问，我用两个日志模块，但是不要这么复杂行不行，为什么 redo log 要引入 prepare 预提交状态？这里我们用反证法来说明下为什么要这么做？
-
-•**先写 redo log 直接提交，然后写 binlog**，假设写完 redo log 后，机器挂了，binlog 日志没有被写入，那么机器重启后，这台机器会通过 redo log 恢复数据，但是这个时候 bingog 并没有记录该数据，后续进行机器备份的时候，就会丢失这一条数据，同时主从同步也会丢失这一条数据。•**先写 binlog，然后写 redo log**，假设写完了 binlog，机器异常重启了，由于没有 redo log，本机是无法恢复这一条记录的，但是 binlog 又有记录，那么和上面同样的道理，就会产生数据不一致的情况。
-
-如果采用 redo log 两阶段提交的方式就不一样了，写完 binglog 后，然后再提交 redo log 就会防止出现上述的问题，从而保证了数据的一致性。那么问题来了，有没有一个极端的情况呢？假设 redo log 处于预提交状态，binglog 也已经写完了，这个时候发生了异常重启会怎么样呢？ 这个就要依赖于 MySQL 的处理机制了，MySQL 的处理过程如下：
-
-•判断 redo log 是否完整，如果判断是完整的，就立即提交。•如果 redo log 只是预提交但不是 commit 状态，这个时候就会去判断 binlog 是否完整，如果完整就提交 redo log, 不完整就回滚事务。
-
-### 5.3 总结
-
-•MySQL 主要分为 Server 层和引擎层，Server 层主要包括连接器、查询缓存、分析器、优化器、执行器，同时还有一个日志模块（binlog），这个日志模块所有执行引擎都可以共用,redolog 只有 InnoDB 有。
-
-•引擎层是插件式的，目前主要包括，MyISAM,InnoDB,Memory 等。
-
-•SQL 等执行过程分为两类，一类对于查询等过程如下：权限校验---》查询缓存---》分析器---》优化器---》权限校验---》执行器---》引擎
-
-•对于更新等语句执行流程如下：分析器----》权限校验----》执行器---》引擎---redo log prepare---》binlog---》redo log commit
+连接器：建立连接，管理连接、校验用户身份；
+查询缓存：查询语句如果命中查询缓存则直接返回，否则继续往下执行。MySQL 8.0 已删除该模块；
+解析 SQL，通过解析器对 SQL 查询语句进行词法分析、语法分析，然后构建语法树，方便后续模块读取表名、字段、语句类型；
+执行 SQL：执行 SQL 共有三个阶段：
+预处理阶段：检查表或字段是否存在；将 select * 中的 * 符号扩展为表上的所有列。
+优化阶段：基于查询成本的考虑， 选择查询成本最小的执行计划；
+执行阶段：根据执行计划执行 SQL 查询语句，从存储引擎读取记录，返回给客户端；
 
 ## 6.MySQL日志系统
 
