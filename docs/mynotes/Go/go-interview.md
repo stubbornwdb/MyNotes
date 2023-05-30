@@ -1299,8 +1299,7 @@ return t.tb
 ## 3.13 gorouinte 泄漏有哪些场景
 gorouinte 里有关于 channel 的操作，如果没有正确处理 channel 的读取，会导致 channel 一直阻塞住, goroutine 不能正常结束
 
-## 3.14 
-defer、panic、recover 三者的用法
+## 3.14 defer、panic、recover 三者的用法
 defer 函数调用的顺序是后进先出，当产生 panic 的时候，
 会先执行 panic 前面的 defer 函数后才真的抛出异常。一般的，
 recover 会在 defer 函数里执行并捕获异常，防止程序崩溃。
