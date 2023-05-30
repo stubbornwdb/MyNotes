@@ -50,6 +50,9 @@
 [JVM题](notes/JVM题.md) </br>  
 [Java I/O](notes/Java%20IO.md)  
 
+## Go
+[Go](mynotes/Go/go-interview.md)
+
 ## 💡 系统设计、分布式
 
 [1. 分布式基础理论](notes/分布式.md) </br>
