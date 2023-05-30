@@ -1032,63 +1032,17 @@ SELECT * FROM t_emp A RIGHT JOIN t_dept B ON A.deptId = B.id WHERE A.`deptId` IS
 8. 如果列类型是字符串，那一定要在条件中将数据使用引号引用起来,否则不使用索引。
 9. 如果mysql估计使用全表扫描要比使用索引快,则不使用索引。
 
-## 9.  索引失效及优化
+使用左模糊匹配（like "%xx"）并不一定会走全表扫描，关键还是看数据表中的字段。
+如果数据库表中的字段只有主键+二级索引，那么即使使用了左模糊匹配，也不会走全表
+扫描（type=all），而是走全扫描二级索引树(type=index)。
 
-![image-20201113171420376](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171420376.png)
+## 9. 索引失效及优化
 
-1. 全值匹配
-
-![image-20201113171502477](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171502477.png)
-
-2. 最佳前缀法则
-
-如果索引了多例，要遵守最左前缀法则。指的是查询从索引的最左前列开始并且不跳过索引中的列。
-
-![image-20201113171555404](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171555404.png)
-
-3. 不在索引列上做任何操作（计算、函数、（自动or手动）类型转换），会导致索引失效而转向全表扫描
-
-   ![image-20201113171634763](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171634763.png)
-
-4. 存储引擎不能使用索引中范围条件右边的列
-
-![image-20201113171709368](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171709368.png)
-
-5. 尽量使用覆盖索引（只访问索引的查询（索引列和查询列一致）），减少select*
-
-![image-20201113171747474](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171747474.png)
-
-6. mysql在使用不等于（！=或者<>）的时候无法使用索引会导致全表扫描
-
-![image-20201113171821438](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171821438.png)
-
-7. is null,is not null 也无法使用索引
-
-![image-20201113171853369](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171853369.png)
-
-8. like以通配符开头（'$abc...'）mysql索引失效会变成全表扫描操作
-
-![image-20201113171926440](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113171926440.png)
-
-问题：解决like'%字符串%'索引不被使用的方法？？
-
-- 可以使用主键索引
-- 使用覆盖索引，查询字段必须是建立覆盖索引字段
-- 当覆盖索引指向的字段是varchar(380)及380以上的字段时，覆盖索引会失效！
-
-9. 字符串不加单引号索引失效
-
-![image-20201113172046573](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113172046573.png)
-
-10. 少用or,用它连接时会索引失效
-
-![image-20201113172115258](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113172115258.png)
 
 ## 10.索引性能分析
 
 ### 10.1 MySQL Query Optimizer
 
-![image-20201113191802987](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113191802987.png)
 
 ### 10.2 MySQL常见瓶颈
 
@@ -1112,7 +1066,6 @@ IO:磁盘I/O瓶颈发生在装入数据远大于内存容量时
 
 **包含信息**：
 
-![](E:\InterviewNotes\docs\mypics\图像.png)
 
 **字段解释**
 
@@ -1124,19 +1077,13 @@ select查询的序列号，包含一组数字，表示查询中执行select子�
 
 - id相同，执行顺序由上至下
 
-![image-20201113192832650](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113192832650.png)
 
 - id不同，如果是子查询，id的序号会递增，id值越大优先级越高，越先被执行
 
-![image-20201113192902758](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113192902758.png)
 
 - id相同不同，同时存在
 
-![image-20201113192922805](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113192922805.png)
-
 ②select_type
-
-- 包括：![image-20201113193013155](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113193013155.png)
 
 - 查询的类型，主要用于区别普通查询、联合查询、子查询等的复杂查询
 
@@ -1189,29 +1136,15 @@ select查询的序列号，包含一组数字，表示查询中执行select子�
 
 **case:**
 
-![image-20201113192551813](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113192551813.png)
-
-![image-20201113192601707](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113192601707.png)
-
 # 三、查询截取分析
 
 ## 1. 查询截取分析
-
-![image-20201113191011731](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113191011731.png)
 
 ### 1.1  永远小表驱动大表
 
 类似嵌套循环Nested Loop
 
-![image-20201113191132495](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113191132495.png)
-
-![image-20201113191143071](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113191143071.png)
-
-![image-20201113191153588](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113191153588.png)
-
 ### 1.2 Order By 关键字优化
-
-![image-20201113191316378](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113191316378.png)
 
 ### 1.3 Group By关键字优化
 
@@ -1286,8 +1219,6 @@ SELECT * FROM post WHERE post.id IN (123,456,567,9098,8904);
 
 # 四、存储引擎
 
-![image-20201113170509770](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113170509770.png)
-
 ## InnoDB
 
 ### 1. InnoDB 特点
@@ -1303,84 +1234,55 @@ SELECT * FROM post WHERE post.id IN (123,456,567,9098,8904);
 支持真正的在线热备份。其它存储引擎不支持在线热备份，要获取一致性视图需要停止对所有表的写入，而在读写混合场景中，停止写入可能也意味着停止读取。
 
 ### 2.MVCC机制
+MySQL 在「可重复读」隔离级别下，可以很大程度上避免幻读现象的发生（注意是很大程度避免，并不是彻底避免），所以 MySQL 并不会使用「串行化」隔离级别来避免幻读现象的发生，因为使用「串行化」隔离级别会影响性能。
 
-2.1
+MySQL InnoDB 引擎的默认隔离级别虽然是「可重复读」，但是它很大程度上避免幻读现象（并不是完全解决了，详见这篇文章 (opens new window)），解决的方案有两种：
 
-多版本并发控制（Multi-Version Concurrency Control, MVCC）是 MySQL 的 InnoDB 存储引擎实现隔离级别的一种具体方式，用于实现提交读和可重复读这两种隔离级别。而未提交读隔离级别总是读取最新的数据行，无需使用 MVCC。可串行化隔离级别需要对所有读取的行都加锁，单纯使用 MVCC 无法实现。
+针对快照读（普通 select 语句），是通过 MVCC 方式解决了幻读，因为可重复读隔离级别下，事务执行过程中看到的数据，一直跟这个事务启动时看到的数据是一致的，即使中途有其他事务插入了一条数据，是查询不出来这条数据的，所以就很好了避免幻读问题。
+针对当前读（select ... for update 等语句），是通过 next-key lock（记录锁+间隙锁）方式解决了幻读，因为当执行 select ... for update 语句的时候，会加上 next-key lock，如果有其他事务在 next-key lock 锁范围内插入了一条记录，那么这个插入语句就会被阻塞，无法成功插入，所以就很好了避免幻读问题。
 
-MVCC的特点就是在同一时刻，不同事务可以读取到不同版本的数据，从而可以解决脏读和不可重复读的问题。
+这四种隔离级别具体是如何实现的呢？
 
-MVCC实际上就是通过数据的隐藏列和回滚日志（undo log），实现多个版本数据的共存。这样的好处是，使用MVCC进行读数据的时候，不用加锁，从而避免了同时读写的冲突。
+对于「读未提交」隔离级别的事务来说，因为可以读到未提交事务修改的数据，所以直接读取最新的数据就好了；
+对于「串行化」隔离级别的事务来说，通过加读写锁的方式来避免并行访问；
+对于「读提交」和「可重复读」隔离级别的事务来说，它们是通过 Read View 来实现的，它们的区别在于创建 Read View 的时机不同，大家可以把 Read View 理解成一个数据快照，
+就像相机拍照那样，定格某一时刻的风景。「读提交」隔离级别是在「每个语句执行前」都会重新生成一个 Read View，而「可重复读」隔离级别是「启动事务时」生成一个 Read View，然
+后整个事务期间都在用这个 Read View。
+注意，执行「开始事务」命令，并不意味着启动了事务。在 MySQL 有两种开启事务的命令，分别是：
 
-在实现MVCC时，每一行的数据中会额外保存几个隐藏的列，比如当前行创建时的版本号和删除时间和指向undo log的回滚指针。这里的版本号并不是实际的时间值，而是系统版本号。每开始新的事务，系统版本号都会自动递增。事务开始时的系统版本号会作为事务的版本号，用来和查询每行记录的版本号进行比较。
+第一种：begin/start transaction 命令；
+第二种：start transaction with consistent snapshot 命令；
+这两种开启事务的命令，事务的启动时机是不同的：
 
-每个事务又有自己的版本号，这样事务内执行数据操作时，就通过版本号的比较来达到数据版本控制的目的。
+执行了 begin/start transaction 命令后，并不代表事务启动了。只有在执行这个命令后，执行了增删查改操作的 SQL 语句，才是事务真正启动的时机；
+执行了 start transaction with consistent snapshot 命令，就会马上启动事务。
 
-另外，InnoDB实现的隔离级别RR时可以避免幻读现象的，这是通过`next-key lock`机制实现的。
+Read View 有四个重要的字段：
 
-`next-key lock`实际上就是行锁的一种，只不过它不只是会锁住当前行记录的本身，还会锁定一个范围。比如上面幻读的例子，开始查询0<阅读量<100的文章时，只查到了一个结果。`next-key lock`会将查询出的这一行进行锁定，同时还会对0<阅读量<100这个范围进行加锁，这实际上是一种间隙锁。间隙锁能够防止其他事务在这个间隙修改或者插入记录。这样一来，就保证了在0<阅读量<100这个间隙中，只存在原来的一行数据，从而避免了幻读。
+m_ids ：指的是在创建 Read View 时，当前数据库中「活跃事务」的事务 id 列表，注意是一个列表，“活跃事务”指的就是，启动了但还没提交的事务。
+min_trx_id ：指的是在创建 Read View 时，当前数据库中「活跃事务」中事务 id 最小的事务，也就是 m_ids 的最小值。
+max_trx_id ：这个并不是 m_ids 的最大值，而是创建 Read View 时当前数据库中应该给下一个事务的 id 值，也就是全局事务中最大的事务 id 值 + 1；
+creator_trx_id ：指的是创建该 Read View 的事务的事务 id。
+知道了 Read View 的字段，我们还需要了解聚簇索引记录中的两个隐藏列。
+对于使用 InnoDB 存储引擎的数据库表，它的聚簇索引记录中都包含下面两个隐藏列：
+trx_id，当一个事务对某条聚簇索引记录进行改动时，就会把该事务的事务 id 记录在 trx_id 隐藏列里；
+roll_pointer，每次对某条聚簇索引记录进行改动时，都会把旧版本的记录写入到 undo 日志中，然后这个隐藏列是个指针，指向每一个旧版本记录，于是就可以通过它找到修改前的记录。
+在创建 Read View 后，我们可以将记录中的 trx_id 划分这三种情况：
 
-版本号
+一个事务去访问记录的时候，除了自己的更新记录总是可见之外，还有这几种情况：
 
-- 系统版本号：是一个递增的数字，每开始一个新的事务，系统版本号就会自动递增。
-- 事务版本号：事务开始时的系统版本号。
+如果记录的 trx_id 值小于 Read View 中的 min_trx_id 值，表示这个版本的记录是在创建 Read View 前已经提交的事务生成的，所以该版本的记录对当前事务可见。
+如果记录的 trx_id 值大于等于 Read View 中的 max_trx_id 值，表示这个版本的记录是在创建 Read View 后才启动的事务生成的，所以该版本的记录对当前事务不可见。
+如果记录的 trx_id 值在 Read View 的 min_trx_id 和 max_trx_id 之间，需要判断 trx_id 是否在 m_ids 列表中：
+如果记录的 trx_id 在 m_ids 列表中，表示生成该版本记录的活跃事务依然活跃着（还没提交事务），所以该版本的记录对当前事务不可见。
+如果记录的 trx_id 不在 m_ids列表中，表示生成该版本记录的活跃事务已经被提交，所以该版本的记录对当前事务可见。
+这种通过「版本链」来控制并发事务访问同一个记录时的行为就叫 MVCC（多版本并发控制）。
 
-隐藏的列
+可重复读隔离级别是启动事务时生成一个 Read View，然后整个事务期间都在用这个 Read View。
 
-MVCC 在每行记录后面都保存着两个隐藏的列，用来存储两个版本号：
+读提交隔离级别是在每次读取数据时，都会生成一个新的 Read View。
+也意味着，事务期间的多次读取同一条数据，前后两次读的数据可能会出现不一致，因为可能这期间另外一个事务修改了该记录，并提交了事务。
 
-- 创建版本号：指示创建一个数据行的快照时的系统版本号；
-- 删除版本号：如果该快照的删除版本号大于当前事务版本号表示该快照有效，否则表示该快照已经被删除了。
-
-Undo 日志
-
-MVCC 使用到的快照存储在 Undo 日志中，该日志通过回滚指针把一个数据行（Record）的所有快照连接起来。
-
-2.2 实现过程
-
-以下实现过程针对可重复读隔离级别。
-
-当开始新一个事务时，该事务的版本号肯定会大于当前所有数据行快照的创建版本号，理解这一点很关键。
-
-①SELECT
-
-多个事务必须读取到同一个数据行的快照，并且这个快照是距离现在最近的一个有效快照。但是也有例外，如果有一个事务正在修改该数据行，那么它可以读取事务本身所做的修改，而不用和其它事务的读取结果一致。
-
-把没有对一个数据行做修改的事务称为 T，T 所要读取的数据行快照的创建版本号必须小于 T 的版本号，因为如果大于或者等于 T 的版本号，那么表示该数据行快照是其它事务的最新修改，因此不能去读取它。除此之外，T 所要读取的数据行快照的删除版本号必须大于 T 的版本号，因为如果小于等于 T 的版本号，那么表示该数据行快照是已经被删除的，不应该去读取它。
-
-②INSERT
-
-将当前系统版本号作为数据行快照的创建版本号。
-
-③DELETE
-
-将当前系统版本号作为数据行快照的删除版本号。
-
- ④UPDATE
-
-将当前系统版本号作为更新前的数据行快照的删除版本号，并将当前系统版本号作为更新后的数据行快照的创建版本号。可以理解为先执行 DELETE 后执行 INSERT。
-
-2.3 快照读与当前读
-
-①快照读
-
-使用 MVCC 读取的是快照中的数据，这样可以减少加锁所带来的开销。
-
-```sql
-select * from table ...;Copy to clipboardErrorCopied
-```
-
-②当前读
-
-读取的是最新的数据，需要加锁。以下第一个语句需要加 S 锁，其它都需要加 X 锁。
-
-```sql
-select * from table where ? lock in share mode;
-select * from table where ? for update;
-insert;
-update;
-delete;
-```
 
 ### 3. InnoDB存储引擎工作方式
 
@@ -1407,8 +1309,6 @@ delete;
 - 当数据库宕机时，数据库可能正在写一个页面，而这个页面只写了一部分，则称之为部分写失效，从而导致数据丢失
 - 如果此时直接使用Undo日志，由于页出现了损坏，所以此时是无意义的
 - `在执行Undo日志之前，先需要一个页副本用来恢复的没有写之前的状态，再进行重做。`
-
-![在这里插入图片描述](https://imgconvert.csdnimg.cn/aHR0cHM6Ly9pbWctMTMwMjQ3NDEwMy5jb3MuYXAtbmFuamluZy5teXFjbG91ZC5jb20vaW1nLzIwMjAwNDA5MTgzNjAwOTI2LnBuZw?x-oss-process=image/format,png)
 
 - doublewrite由两部分组成：内存中的doublewrite buffer，物理磁盘共享表中的两个区
 - `在缓冲池脏页刷新时，先将数据拷贝到内存中的doublewrite buffer，然后在写入物理磁盘共享表中的两个区，然后在更新磁盘数据`
