@@ -13,16 +13,13 @@
 
 > [计算机操作系统](notes/计算机操作系统.md) </br>
 > [Linux](notes/Linux.md)</br>
-> [操作系统复习-王道考研](notes/操作系统复习.md)</br>
 
 ## ☁️ 网络
 
-> [计算机网络](notes/计算机网络.md) </br>
 > [HTTP](notes/HTTP.md) </br>
 > [Socket](notes/Socket.md)</br>
-> [计算机网络2](notes/计算机网络2.md) </br>
 > [网络编程](notes/网络编程.md) </br>
-> [计算机网络3](notes/计算机网络3.md) 
+> [计算机网络](notes/计算机网络3.md) 
 
 ## 🔓 面向对象
 
@@ -30,10 +27,6 @@
 > [面向对象思想](notes/面向对象思想.md)
 
 ## 💾 数据库
-
-[数据库系统原理](notes/数据库系统原理.md) </br>
-[SQL](notes/SQL.md) </br>
-[Leetcode-Database 题解](notes/Leetcode-Database%20题解.md) </br>
 [MySQL](notes/MySQL.md) </br>
 [Redis](notes/Redis.md)
 [Redis面经](mynotes/redis/RedisQuestion.md)
