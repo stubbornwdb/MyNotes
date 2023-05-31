@@ -764,8 +764,6 @@ select * from user_innodb where id = 28;
 
 - **全文索引(Full Text)** ：全文索引主要是为了检索大文本数据中的关键字的信息，是目前搜索引擎数据库使用的一种技术。Mysql5.6之前只有MYISAM引擎支持全文索引，5.6之后InnoDB也支持了全文索引。
 
-![image-20201113190216191](C:\Users\吴宝\AppData\Roaming\Typora\typora-user-images\image-20201113190216191.png)
-
 ### 4.3 聚集索引
 
 **聚集索引即索引结构和数据一起存放的索引。主键索引属于聚集索引。**
