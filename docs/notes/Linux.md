@@ -107,6 +107,136 @@ find 命令主要作用是沿着文件层次结构向下遍历，匹配符合条
 
 grep 搜索，如:grep -r "hello world" .
 
+# 线上故障排查完整套路 - 从 CPU、磁盘、内存、网络、GC
+线上故障主要会包括cpu、磁盘、内存以及网络问题，而大多数故障可能会包含不止一个层面的问题，所以进行排查时候尽量四个方面依次排查一遍。
+同时例如jstack、jmap等工具也是不囿于一个方面的问题的，基本上出问题就是df、free、top 三连，然后依次jstack、jmap伺候，具体问题具体分析即可。
+## 1.CPU
+一般来讲我们首先会排查cpu方面的问题。cpu异常往往还是比较好定位的。原因包括业务逻辑问题(死循环)、频繁gc以及上下文切换过多。而最常见的往往是业务逻辑(或者框架逻辑)导致的，可以使用jstack来分析对应的堆栈情况。
+- 用ps命令找到对应进程的pid(如果你有好几个目标进程，可以先用top看一下哪个占用比较高)。
+- 用top -H -p pid来找到cpu使用率比较高的一些线程
+- 然后将占用最高的pid转换为16进制printf '%x\n' pid得到nid
+- 接着直接在jstack中找到相应的堆栈信息jstack pid |grep 'nid' -C5 –color
+- 可以看到我们已经找到了nid为0x42的堆栈信息，接着只要仔细分析一番即可。当然更常见的是我们对整个jstack文件进行分析，通常我们会比较关注WAITING和TIMED_WAITING的部分，BLOCKED就不用说了。我们可以使用命令cat jstack.log | grep "java.lang.Thread.State" | sort -nr | uniq -c来对jstack的状态有一个整体的把握，如果WAITING之类的特别多，那么多半是有问题啦。
+
+### 1.1 频繁gc
+当然我们还是会使用jstack来分析问题，但有时候我们可以先确定下gc是不是太频繁，使用jstat -gc pid 1000命令来对gc分代变化情况进行观察，1000表示采样间隔(ms)，S0C/S1C、S0U/S1U、EC/EU、OC/OU、MC/MU分别代表两个Survivor区、Eden区、老年代、元数据区的容量和使用量。YGC/YGT、FGC/FGCT、GCT则代表YoungGc、FullGc的耗时和次数以及总耗时。如果看到gc比较频繁，再针对gc方面做进一步分析。
+
+### 1.2 上下文切换
+针对频繁上下文问题，我们可以使用vmstat命令来进行查看
+cs(context switch)一列则代表了上下文切换的次数。
+
+如果我们希望对特定的pid进行监控那么可以使用 pidstat -w pid命令，cswch和nvcswch表示自愿及非自愿切换。
+
+## 2.磁盘
+- 磁盘问题和cpu一样是属于比较基础的。首先是磁盘空间方面，我们直接使用df -hl来查看文件系统状态
+- 更多时候，磁盘问题还是性能上的问题。我们可以通过iostatiostat -d -k -x来进行分析
+最后一列%util可以看到每块磁盘写入的程度，而rrqpm/s以及wrqm/s分别表示读写速度，一般就能帮助定位到具体哪块磁盘出现问题了。
+
+- 另外我们还需要知道是哪个进程在进行读写，一般来说开发自己心里有数，或者用iotop命令来进行定位文件读写的来源。
+- 不过这边拿到的是tid，我们要转换成pid，可以通过readlink来找到pidreadlink -f /proc/*/task/tid/../..。
+- 找到pid之后就可以看这个进程具体的读写情况cat /proc/pid/io
+- 我们还可以通过lsof命令来确定具体的文件读写情况lsof -p pid
+
+## 3.内存
+内存问题排查起来相对比CPU麻烦一些，场景也比较多。主要包括OOM、GC问题和堆外内存。一般来讲，我们会先用free命令先来检查一发内存的各种情况。
+
+### 3.1 堆内内存
+内存问题大多还都是堆内内存问题。表象上主要分为OOM和StackOverflow。
+
+### 3.2 OOM
+JMV中的内存不足，OOM大致可以分为以下几种：
+
+Exception in thread "main" java.lang.OutOfMemoryError: unable to create new native thread
+
+这个意思是没有足够的内存空间给线程分配java栈，基本上还是线程池代码写的有问题，比如说忘记shutdown，所以说应该首先从代码层面来寻找问题，使用jstack或者jmap。如果一切都正常，JVM方面可以通过指定Xss来减少单个thread stack的大小。
+
+另外也可以在系统层面，可以通过修改/etc/security/limits.confnofile和nproc来增大os对线程的限制
+
+Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+
+这个意思是堆的内存占用已经达到-Xmx设置的最大值，应该是最常见的OOM错误了。解决思路仍然是先应该在代码中找，怀疑存在内存泄漏，通过jstack和jmap去定位问题。如果说一切都正常，才需要通过调整Xmx的值来扩大内存。
+
+Caused by: java.lang.OutOfMemoryError: Meta space
+
+这个意思是元数据区的内存占用已经达到XX:MaxMetaspaceSize设置的最大值，排查思路和上面的一致，参数方面可以通过XX:MaxPermSize来进行调整(这里就不说1.8以前的永久代了)。
+
+### 3.3 Stack Overflow
+栈内存溢出，这个大家见到也比较多。
+
+Exception in thread "main" java.lang.StackOverflowError
+
+表示线程栈需要的内存大于Xss值，同样也是先进行排查，参数方面通过Xss来调整，但调整的太大可能又会引起OOM。
+
+- 使用JMAP定位代码内存泄漏
+上述关于OOM和StackOverflow的代码排查方面，我们一般使用JMAPjmap -dump:format=b,file=filename pid来导出dump文件
+
+## 4 网络 
+涉及到网络层面的问题一般都比较复杂，场景多，定位难，成为了大多数开发的噩梦，应该是最复杂的了。这里会举一些例子，并从tcp层、应用层以及工具的使用等方面进行阐述。
+
+### 4.1 超时
+超时错误大部分处在应用层面，所以这块着重理解概念。超时大体可以分为连接超时和读写超时，某些使用连接池的客户端框架还会存在获取连接超时和空闲连接清理超时。
+
+- 读写超时。readTimeout/writeTimeout，有些框架叫做so_timeout或者socketTimeout，均指的是数据读写超时。注意这边的超时大部分是指逻辑上的超时。soa的超时指的也是读超时。读写超时一般都只针对客户端设置。
+
+- 连接超时。connectionTimeout，客户端通常指与服务端建立连接的最大时间。服务端这边connectionTimeout就有些五花八门了，jetty中表示空闲连接清理时间，tomcat则表示连接维持的最大时间。
+
+- 其他。包括连接获取超时connectionAcquireTimeout和空闲连接清理超时idleConnectionTimeout。多用于使用连接池或队列的客户端或服务端框架。
+
+我们在设置各种超时时间中，需要确认的是尽量保持客户端的超时小于服务端的超时，以保证连接正常结束。
+
+在实际开发中，我们关心最多的应该是接口的读写超时了。
+
+如何设置合理的接口超时是一个问题。如果接口超时设置的过长，那么有可能会过多地占用服务端的tcp连接。而如果接口设置的过短，那么接口超时就会非常频繁。
+
+服务端接口明明rt降低，但客户端仍然一直超时又是另一个问题。这个问题其实很简单，客户端到服务端的链路包括网络传输、排队以及服务处理等，每一个环节都可能是耗时的原因
+### 4.2 TCP 队列溢出
+tcp队列溢出是个相对底层的错误，它可能会造成超时、rst等更表层的错误。因此错误也更隐蔽，所以我们单独说一说。
+有两个队列：syns queue(半连接队列）、accept queue（全连接队列）。三次握手，在server收到client的syn后，把消息放到syns queue，回复syn+ack给client，server收到client的ack，如果这时accept queue没满，那就从syns queue拿出暂存的信息放入accept queue中，否则按tcp_abort_on_overflow指示的执行。
+
+tcp_abort_on_overflow 0表示如果三次握手第三步的时候accept queue满了那么server扔掉client发过来的ack。tcp_abort_on_overflow 1则表示第三步的时候如果全连接队列满了，server发送一个rst包给client，表示废掉这个握手过程和这个连接，意味着日志里可能会有很多connection reset / connection reset by peer。
+
+**那么在实际开发中，我们怎么能快速定位到tcp队列溢出呢？**
+
+- netstat命令，执行`netstat -s | egrep "listen|LISTEN"`
+
+overflowed表示全连接队列溢出的次数，sockets dropped表示半连接队列溢出的次数。
+
+- ss命令，执行ss -lnt
+
+看到Send-Q 表示第三列的listen端口上的全连接队列最大为5，第一列Recv-Q为全连接队列当前使用了多少。
+
+**接着我们看看怎么设置全连接、半连接队列大小吧：**
+
+全连接队列的大小取决于min(backlog, somaxconn)。backlog是在socket创建的时候传入的，somaxconn是一个os级别的系统参数。而半连接队列的大小取决于max(64, /proc/sys/net/ipv4/tcp_max_syn_backlog)。
+
+在日常开发中，我们往往使用servlet容器作为服务端，所以我们有时候也需要关注容器的连接队列大小。在tomcat中backlog叫做acceptCount，在jetty里面则是acceptQueueSize。
+
+### 4.3 RST异常
+RST包表示连接重置，用于关闭一些无用的连接，通常表示异常关闭，区别于四次挥手。
+
+在实际开发中，我们往往会看到connection reset / connection reset by peer错误，这种情况就是RST包导致的。
+
+### 4.4 端口不存在
+如果像不存在的端口发出建立连接SYN请求，那么服务端发现自己并没有这个端口则会直接返回一个RST报文，用于中断连接。
+
+### 4.5 主动代替FIN终止连接
+一般来说，正常的连接关闭都是需要通过FIN报文实现，然而我们也可以用RST报文来代替FIN，表示直接终止连接。实际开发中，可设置SO_LINGER数值来控制，这种往往是故意的，来跳过TIMED_WAIT，提供交互效率，不闲就慎用。
+
+客户端或服务端有一边发生了异常，该方向对端发送RST以告知关闭连接
+
+我们上面讲的tcp队列溢出发送RST包其实也是属于这一种。这种往往是由于某些原因，一方无法再能正常处理请求连接了(比如程序崩了，队列满了)，从而告知另一方关闭连接。
+
+接收到的TCP报文不在已知的TCP连接内
+
+比如，一方机器由于网络实在太差TCP报文失踪了，另一方关闭了该连接，然后过了许久收到了之前失踪的TCP报文，但由于对应的TCP连接已不存在，那么会直接发一个RST包以便开启新的连接。
+
+一方长期未收到另一方的确认报文，在一定时间或重传次数后发出RST报文
+
+这种大多也和网络环境相关了，网络环境差可能会导致更多的RST报文。
+
+之前说过RST报文多会导致程序报错，在一个已关闭的连接上读操作会报connection reset，而在一个已关闭的连接上写操作则会报connection reset by peer。通常我们可能还会看到broken pipe错误，这是管道层面的错误，表示对已关闭的管道进行读写，往往是在收到RST，报出connection reset错后继续读写数据报的错，这个在glibc源码注释中也有介绍。
+
+我们在排查故障时候怎么确定有RST包的存在呢？当然是使用tcpdump命令进行抓包，并使用wireshark进行简单分析了。tcpdump -i en0 tcp -w xxx.cap，en0表示监听的网卡。
 
 
 # 一、常用操作以及概念
