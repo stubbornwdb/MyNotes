@@ -107,6 +107,19 @@ find 命令主要作用是沿着文件层次结构向下遍历，匹配符合条
 
 grep 搜索，如:grep -r "hello world" .
 
+## 要在 Nginx 的 access log 中查出请求最多的前 10 个 IP
+可以使用以下命令：
+`awk '{print $1}' /path/to/your/access.log | sort | uniq -c | sort -nr | head -n 10`
+这个命令的详细解释如下：
+awk '{print $1}' /path/to/your/access.log：使用 awk 提取 access.log 中的每一行的第一个字段，即客户端 IP 地址。
+sort：对 IP 地址进行排序。
+uniq -c：计算每个唯一 IP 地址的出现次数，并在每个 IP 地址前添加计数。
+sort -nr：按照出现次数进行降序排序。
+head -n 10：获取前 10 个结果。
+请确保将 /path/to/your/access.log 替换为你的 Nginx access log 实际路径。
+
+这个命令将输出一个列表，其中包含请求最多的前 10 个 IP 地址及其请求次数。
+
 # 线上故障排查完整套路 - 从 CPU、磁盘、内存、网络、GC
 线上故障主要会包括cpu、磁盘、内存以及网络问题，而大多数故障可能会包含不止一个层面的问题，所以进行排查时候尽量四个方面依次排查一遍。
 同时例如jstack、jmap等工具也是不囿于一个方面的问题的，基本上出问题就是df、free、top 三连，然后依次jstack、jmap伺候，具体问题具体分析即可。
