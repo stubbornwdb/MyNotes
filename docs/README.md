@@ -28,7 +28,7 @@
 
 ## 💾 数据库
 [MySQL](notes/MySQL.md) </br>
-[Redis](notes/Redis.md)
+[Redis](notes/Redis.md) </br>
 [Redis面经](mynotes/redis/RedisQuestion.md)
 
 ## ☕️ Java
