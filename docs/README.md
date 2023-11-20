@@ -30,6 +30,7 @@
 [MySQL](notes/MySQL.md) </br>
 [Redis](notes/Redis.md) </br>
 [Redis面经](mynotes/redis/RedisQuestion.md)
+[Redis面经v2](mynotes/redis/redis_question_v2.md)
 
 ## ☕️ Java
 
