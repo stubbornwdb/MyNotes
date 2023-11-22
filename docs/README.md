@@ -1,5 +1,11 @@
 # WZS Notes
 
+<div align="center">
+    <img src="https://github.com/stubbornwdb/MyNotes/tree/master/assets/g1.jpg" width="200px">
+</div>
+
+<br>
+
 ##  ✏️数据结构与算法
 [数据结构](mynotes/数据结构/数据结构.md) <br>
 [剑指 Offer 题解](notes/剑指%20offer%20题解.md) <br>
