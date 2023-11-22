@@ -1,7 +1,7 @@
 # WZS Notes
 
 <div align="center">
-    <img src="https://github.com/stubbornwdb/MyNotes/tree/master/assets/g1.jpg" width="200px">
+    <img src="./../assets/g4.png" width="500px">
 </div>
 
 <br>

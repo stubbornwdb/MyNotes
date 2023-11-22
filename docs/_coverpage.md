@@ -1,4 +1,7 @@
-![WZS](https://github.com/stubbornwdb/MyNotes/tree/master/assets/g2.jpg)
+<div align="center">
+    <img src="./../assets/g3.jpg" width="500px">
+</div>
 <br>
+
 [Get Started](README.md)
 
