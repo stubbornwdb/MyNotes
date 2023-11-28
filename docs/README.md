@@ -54,4 +54,4 @@
 [秒杀系统的设计](mynotes/秒杀系统.md)<br>
 
 ## 其他
-[introduce](mynotes/Others/自我介绍.md)  <br>
+[introduce](mynotes/Others/introduce.md)  <br>
