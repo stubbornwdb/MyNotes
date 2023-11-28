@@ -275,10 +275,46 @@ MySQL的逻辑架构可分为四层，包括连接层、服务层、引擎层和
 执行阶段：根据执行计划执行 SQL 查询语句，从存储引擎读取记录，返回给客户端；
 
 ## 6.MySQL日志系统
+**1. 什么是redo log？**
 
-MySQL日志系统是数据库的重要组件，用于记录数据库的更新和修改。若数据库发生故障，可通过不同日志记录恢复数据库的原来数据。因此实际上日志系统直接决定着MySQL运行的鲁棒性和稳健性。
+- redo log是InnoDB存储引擎层的日志，又称重做日志文件，**用于记录事务操作的变化，记录的是数据修改之后的值，不管事务是否提交都会记录下来。在实例和介质失败（media failure）时，redo log文件就能派上用场，如数据库掉电，InnoDB存储引擎会使用redo log恢复到掉电前的时刻，以此来保证数据的完整性。**
+- **在一条更新语句进行执行的时候，InnoDB引擎会把更新记录写到redo log日志中，然后更新内存**，此时算是语句执行完了，然后**在空闲的时候或者是按照设定的更新策略将redo log中的内容更新到磁盘中**，这里涉及到`WAL`即`Write Ahead logging`技术，**他的关键点是先写日志，再写磁盘。**
+- 有了redo log日志，那么在数据库进行异常重启的时候，可以根据redo log日志进行恢复，也就达到了`crash-safe`。
+- **redo log日志的大小是固定的，即记录满了以后就从头循环写，并且会暂停当前的所有数据更改操作，先将redo log日志同步到磁盘中。**
 
-MySQL的日志有很多种，如二进制日志（binlog）、错误日志、查询日志、慢查询日志等，此外InnoDB存储引擎还提供了两种日志：redo log（重做日志）和undo log（回滚日志）。这里将重点针对InnoDB引擎，对重做日志、回滚日志和二进制日志这三种进行分析。
+**2. 什么是binlog？**
+
+- 可以作为数据恢复，在MySQL层面保证数据一致性的
+- 属于逻辑日志，是以二进制的形式记录的是这个语句的原始逻辑
+- 也可以用于主从之间保证数据一致性
+
+**3. redo log和binlog区别**
+
+- redo log是属于innoDB层面，binlog属于MySQL Server层面的，这样在数据库用别的存储引擎时可以达到一致性的要求。
+- redo log是物理日志，记录该数据页更新的内容；binlog是逻辑日志，记录的是这个更新语句的原始逻辑
+- redo log是循环写，日志空间大小固定；binlog是追加写，是指一份写到一定大小的时候会更换下一个文件，不会覆盖。
+- binlog可以作为恢复数据使用，也可以用于主从复制搭建，redo log作为异常宕机或者介质故障后的数据恢复使用。
+
+**4. 回滚日志（undo log）**
+
+- 属于InnoDB层面保证事务的原子性
+- 保存了事务发生之前的数据的一个版本，可以用于回滚，同时可以提供多版本并发控制下的读（MVCC），也即非锁定读
+
+**5. redo log和undo log的区别**
+
+- redo log是保证事务持久性的，undo log是保证事务原子性的
+- undo log用于备份一个事务开始前的数据，不会影响原本的数据，都是先在备份中更改，最后写入磁盘
+- redo log用于记录每一个数据更新的内容，用于在二次写中恢复破损的数据
+
+**6. 一条更新语句执行的顺序**
+
+update T set c=c+1 where ID=2;
+
+- 执行器先找引擎取 ID=2 这一行。ID 是主键，引擎直接用树搜索找到这一行。如果 ID=2 这一行所在的数据页本来就在内存中，就直接返回给执行器；否则，需要先从磁盘读入内存，然后再返回。
+- 执行器拿到引擎给的行数据，把这个值加上 1，比如原来是 N，现在就是 N+1，得到新的一行数据，再调用引擎接口写入这行新数据。
+- 引擎将这行新数据更新到内存中，同时将这个更新操作记录到 redo log 里面，此时 redo log 处于 prepare 状态。然后告知执行器执行完成了，随时可以提交事务。
+- 执行器生成这个操作的 binlog，并把 binlog 写入磁盘。
+- 执行器调用引擎的提交事务接口，引擎把刚刚写入的 redo log 改成提交（commit）状态，更新完成。
 
 ### 6.1 重做日志（redo log）
 
@@ -292,11 +328,7 @@ InnoDB引擎对数据的更新，是先将更新记录写入redo log日志，然
 
 值得注意的是，redo log日志的大小是固定的，为了能够持续不断的对更新记录进行写入，在redo log日志中设置了两个标志位置，checkpoint和write_pos，分别表示记录擦除的位置和记录写入的位置。redo log日志的数据写入示意图可见下图。
 
-![为了让你彻底弄懂 MySQL 事务日志，我通宵肝出了这份图解！](https://www.cxyxiaowu.com/wp-content/uploads/2020/06/1591519983-d74ecaf38e6d69e.png)
-
 当`write_pos`标志到了日志结尾时，会从结尾跳至日志头部进行重新循环写入。所以redo log的逻辑结构并不是线性的，而是可看作一个圆周运动。`write_pos`与`checkpoint`中间的空间可用于写入新数据，写入和擦除都是往后推移，循环往复的。
-
-![为了让你彻底弄懂 MySQL 事务日志，我通宵肝出了这份图解！](https://www.cxyxiaowu.com/wp-content/uploads/2020/06/1591519983-97703f26f4ed128.png)
 
 当`write_pos`追上`checkpoint`时，表示redo log日志已经写满。这时不能继续执行新的数据库更新语句，需要停下来先删除一些记录，执行`checkpoint`规则腾出可写空间。
 
@@ -320,11 +352,7 @@ redo log中最重要的概念就是缓冲池`buffer pool`，这是在内存中�
 
 > **fsync函数**：包含在UNIX系统头文件#include <unistd.h>中，用于同步内存中所有已修改的文件数据到储存设备。
 
-在写入的过程中，还需要经过操作系统内核空间的`os buffer`。redo log日志的写入过程可见下图。
-
-![为了让你彻底弄懂 MySQL 事务日志，我通宵肝出了这份图解！](https://www.cxyxiaowu.com/wp-content/uploads/2020/06/1591519984-20b30bb123a534e.png)
-
-redo log日志刷盘流程
+在写入的过程中，还需要经过操作系统内核空间的`os buffer`。
 
 ### 6.2 二进制日志（binlog）
 
@@ -342,13 +370,9 @@ redo log日志刷盘流程
 
 事实上最开始MySQL是没有redo log日志的。因为起先MySQL是没有InnoDB引擎的，自带的引擎是MyISAM。binlog是服务层的日志，因此所有引擎都能够使用。但是光靠binlog日志只能提供归档的作用，无法提供`crash-safe`能力，所以InnoDB引擎就采用了学自于Oracle的技术，也就是redo log，这才拥有了`crash-safe`能力。这里对redo log日志和binlog日志的特点分别进行了对比：
 
-![为了让你彻底弄懂 MySQL 事务日志，我通宵肝出了这份图解！](https://www.cxyxiaowu.com/wp-content/uploads/2020/06/1591519984-c180b06a45a4db2.jpeg)
-
 redo log与binlog的特点比较
 
 在MySQL执行更新语句时，都会涉及到redo log日志和binlog日志的读写。一条更新语句的执行过程如下：
-
-![为了让你彻底弄懂 MySQL 事务日志，我通宵肝出了这份图解！](https://www.cxyxiaowu.com/wp-content/uploads/2020/06/1591519985-94dbea1a3e278d0.png)MySQL更新语句的执行过程
 
 从上图可以看出，MySQL在执行更新语句的时候，在服务层进行语句的解析和执行，在引擎层进行数据的提取和存储；同时在服务层对binlog进行写入，在InnoDB内进行redo log的写入。
 
@@ -360,15 +384,11 @@ redo log与binlog的特点比较
 
 在写完redo log之后，数据此时具有`crash-safe`能力，因此系统崩溃，数据会恢复成事务开始之前的状态。但是，若在redo log写完时候，binlog写入之前，系统发生了宕机。此时binlog没有对上面的更新语句进行保存，导致当使用binlog进行数据库的备份或者恢复时，就少了上述的更新语句。从而使得`id=2`这一行的数据没有被更新。
 
-![为了让你彻底弄懂 MySQL 事务日志，我通宵肝出了这份图解！](https://www.cxyxiaowu.com/wp-content/uploads/2020/06/1591519985-983f08d3622da05.png)
-
 先写redo log后写binlog的问题
 
 **先写入binlog，后写入redo log：**
 
 写完binlog之后，所有的语句都被保存，所以通过binlog复制或恢复出来的数据库中id=2这一行的数据会被更新为a=1。但是如果在redo log写入之前，系统崩溃，那么redo log中记录的这个事务会无效，导致实际数据库中`id=2`这一行的数据并没有更新。
-
-![为了让你彻底弄懂 MySQL 事务日志，我通宵肝出了这份图解！](https://www.cxyxiaowu.com/wp-content/uploads/2020/06/1591519986-62bcaaf9c26bc21.png)
 
 先写binlog后写redo log的问题
 
