@@ -963,7 +963,7 @@ Domain Object 暴露给 Web 层过多的信息，可能引起意想不到的副�
 > [Redis面经](https://stubbornwdb.github.io/MyNotes/#/mynotes/redis/redis_question_v2.md)
 
 ## 消息队列
-> [kafka](https://stubbornwdb.github.io/MyNotes/#/notes/kafka.md)
+> [kafka](https://stubbornwdb.github.io/MyNotes/#/mynotes/mq/kafka.md)
 
 ## Go
 > [Go](https://stubbornwdb.github.io/MyNotes/#/mynotes/Go/go-interview.md)
