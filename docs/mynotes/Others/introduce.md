@@ -902,7 +902,7 @@ Domain Object 暴露给 Web 层过多的信息，可能引起意想不到的副�
 > [Linux](https://stubbornwdb.github.io/MyNotes/#/notes/Linux.md)
 
 ## 数据库
-> [MySQL](https://stubbornwdb.github.io/MyNotes/#/notes/MySQL.md) </br>
+> [MySQL](https://stubbornwdb.github.io/MyNotes/#/mynotes/mysql/mysql.md) </br>
 > [Redis面经](https://stubbornwdb.github.io/MyNotes/#/mynotes/redis/redis_question_v2.md)
 
 ## 消息队列
