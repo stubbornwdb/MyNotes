@@ -310,6 +310,9 @@ if n< 阈值 then zadd 限流key 当前时间戳 score对应的唯一value
 - 动态流量配置：
 不同渠道按比例进行分流
 
+- 熔断
+
+
 ### 1.2.3 项目角色
 项目主要负责人
 
@@ -915,7 +918,7 @@ Domain Object 暴露给 Web 层过多的信息，可能引起意想不到的副�
 
 ---------
 ## 网络
-> [计算机网络](https://stubbornwdb.github.io/MyNotes/#/notes/计算机网络3.md) 
+> [计算机网络](https://stubbornwdb.github.io/MyNotes/#/mynotes/network/network.md) 
 
 ## 操作系统
 > [计算机操作系统](https://stubbornwdb.github.io/MyNotes/#/notes/计算机操作系统.md) </br>

@@ -21,7 +21,7 @@
 [HTTP](notes/HTTP.md) <br>
 [Socket](notes/Socket.md)<br>
 [网络编程](notes/网络编程.md) <br>
-[计算机网络](notes/计算机网络3.md) <br>
+[计算机网络](mynotes/network/network.md) <br>
 
 ## 🔓 面向对象
 [设计模式](notes/设计模式.md) <br>
